@@ -1,0 +1,45 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "A top-down shooter where you catch bullets to power up.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "./node_modules/.bin/vitest",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false ./node_modules/.bin/eslint src --ext .ts",
+    "format": "./node_modules/.bin/prettier --write src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/justttim/bullet-catcher.git"
+  },
+  "keywords": [
+    "phaser",
+    "typescript",
+    "vite",
+    "game"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/justttim/bullet-catcher/issues"
+  },
+  "homepage": "https://github.com/justttim/bullet-catcher#readme",
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.1",
+    "vitest": "^3.2.4"
+  }
+}
