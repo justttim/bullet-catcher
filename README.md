@@ -52,3 +52,4 @@ The Heads-Up Display provides essential information at a glance.
 
 ![HUD Screenshot](placeholder.png)
 *(Screenshot placeholder)*
+Workflow sanity check.
