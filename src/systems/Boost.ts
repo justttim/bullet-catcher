@@ -16,8 +16,12 @@ export class Boost {
     this.boostValue = 0;
   }
 
-  increaseBoost() {
-    this.boostValue = Math.min(1, this.boostValue + balance.boostPerBullet);
+  increaseBoost(savedByAlly = false) {
+    let boostGain = balance.boostPerBullet;
+    if (savedByAlly) {
+      boostGain += balance.allySaveBoostBonus;
+    }
+    this.boostValue = Math.min(1, this.boostValue + boostGain);
     this.gameScene.events.emit('boostChanged', this.getBoostValue());
 
     if (this.boostValue >= 1) {

@@ -5,6 +5,7 @@ export class UI extends Phaser.Scene {
   private gameScene!: Game;
   private levelText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
+  private allyText!: Phaser.GameObjects.Text;
   private boostBarBg!: Phaser.GameObjects.Graphics;
   private boostBarFill!: Phaser.GameObjects.Graphics;
   private boostText!: Phaser.GameObjects.Text;
@@ -37,6 +38,14 @@ export class UI extends Phaser.Scene {
       .text(this.scale.width - 10, 40, 'Time: 0', {
         fontSize: '24px',
         color: '#ffffff',
+      })
+      .setOrigin(1, 0);
+
+    // Ally Text
+    this.allyText = this.add
+      .text(this.scale.width - 10, 70, 'Allies: 0', {
+        fontSize: '18px',
+        color: '#00ff00',
       })
       .setOrigin(1, 0);
 
@@ -84,9 +93,17 @@ export class UI extends Phaser.Scene {
   }
 
   update() {
-    if (this.gameScene && this.gameScene['levelTimer']) {
-      const remaining = this.gameScene['levelTimer'].getRemainingSeconds();
+    if (!this.gameScene) return;
+
+    if (this.gameScene.levelTimer) {
+      const remaining = this.gameScene.levelTimer.getRemainingSeconds();
       this.timerText.setText(`Time: ${Math.ceil(remaining)}`);
     }
+
+    const allyCount = this.gameScene.getAllies
+      ? this.gameScene.getAllies().getLength()
+      : 0;
+    this.allyText.setText(`Allies: ${allyCount}`);
+    this.allyText.setVisible(allyCount > 0);
   }
 }

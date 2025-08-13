@@ -25,6 +25,21 @@ export const balance = {
 
   // Level
   levelTimeSec: 40,
+
+  // Ally
+  allyEnabled: true,
+  allyStartLevel: 6,
+  allyAddEveryNLevels: 4,
+  allyMaxCount: 3,
+  allyMaxHP: 3,
+  allyFollowLerp: 0.08,
+  allyOffsetY: 56,
+  allySpacing: 26,
+  allyIFrameMs: 800,
+  allyShowHpMs: 2000,
+  allySaveBoostBonus: 0.05,
+  allySaveRadius: 72,
+
   // Audio and visual effects
   fxEnabled: true,
   sfxEnabled: true,
