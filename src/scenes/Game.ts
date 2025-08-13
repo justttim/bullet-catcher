@@ -9,18 +9,37 @@ import { Aiming } from '../systems/Aiming';
 import { AudioSystem } from '../systems/Audio';
 import { balance } from '../config/balance';
 
+class Ally extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene: Game, x: number, y: number) {
+    super(scene, x, y, 'ally');
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
+    this.setCollideWorldBounds(true);
+  }
+
+  kill() {
+    (this.scene as Game).decrementAllies();
+    this.destroy();
+  }
+}
+
 export class Game extends Phaser.Scene {
   player!: Player;
   level!: Level;
   aiming!: Aiming;
   boost!: Boost;
   audioSystem!: AudioSystem;
-  levelTimer!: Phaser.Time.TimerEvent;
 
   private enemies!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
+  private allies!: Phaser.Physics.Arcade.Group;
   private spawner!: Spawner;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private isGameOver = false;
+  private alliesAlive = 0;
+  private enemiesAlive = 0;
+  private aimAngle = 0;
+  private telegraphCone?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super('game');
@@ -44,6 +63,12 @@ export class Game extends Phaser.Scene {
     bulletGraphics.fillCircle(8, 8, 8);
     bulletGraphics.generateTexture('bullet', 16, 16);
     bulletGraphics.destroy();
+
+    const allyGraphics = this.make.graphics({ x: 0, y: 0 });
+    allyGraphics.fillStyle(0x00ff00);
+    allyGraphics.fillRect(0, 0, 24, 24);
+    allyGraphics.generateTexture('ally', 24, 24);
+    allyGraphics.destroy();
   }
 
   create(): void {
@@ -57,6 +82,7 @@ export class Game extends Phaser.Scene {
 
     this.enemies = this.physics.add.group();
     this.bullets = this.physics.add.group();
+    this.allies = this.physics.add.group();
 
     this.spawner = new Spawner(this, this.level, this.enemies);
 
@@ -72,34 +98,162 @@ export class Game extends Phaser.Scene {
   }
 
   update(_time: number, _delta: number) {
+    if (this.isGameOver) {
+      return;
+    }
     this.player.update(this.cursors);
     this.enemies.getChildren().forEach((enemy) => (enemy as Enemy).update());
+
+    this.aimAngle = Phaser.Math.Angle.Between(
+      this.player.x,
+      this.player.y,
+      this.input.activePointer.worldX,
+      this.input.activePointer.worldY,
+    );
+
+    // Telegraph logic
+    const boostValue = this.boost.getBoostValue();
+    if (boostValue >= balance.boostTelegraphThreshold) {
+      if (!this.telegraphCone) {
+        this.telegraphCone = this.add.graphics();
+      }
+      this.telegraphCone.clear();
+
+      let allyInDanger = false;
+      if (this.alliesFeatureActive()) {
+        this.getAllies()
+          .getChildren()
+          .forEach((ally) => {
+            if (this.isTargetInCone(ally as Phaser.Physics.Arcade.Sprite)) {
+              allyInDanger = true;
+            }
+          });
+      }
+
+      const color = allyInDanger ? 0xff0000 : 0xffffff;
+      this.telegraphCone.fillStyle(color, 0.3);
+
+      const blastArcRad = Phaser.Math.DegToRad(balance.blastArc);
+      this.telegraphCone.slice(
+        this.player.x,
+        this.player.y,
+        balance.blastRadius,
+        this.aimAngle - blastArcRad / 2,
+        this.aimAngle + blastArcRad / 2,
+      );
+    } else {
+      if (this.telegraphCone) {
+        this.telegraphCone.destroy();
+        this.telegraphCone = undefined;
+      }
+    }
+  }
+
+  isTargetInCone(target: Phaser.GameObjects.Sprite): boolean {
+    const distance = Phaser.Math.Distance.Between(
+      this.player.x,
+      this.player.y,
+      target.x,
+      target.y,
+    );
+
+    if (distance > balance.blastRadius) {
+      return false;
+    }
+
+    const angleToTarget = Phaser.Math.Angle.Between(
+      this.player.x,
+      this.player.y,
+      target.x,
+      target.y,
+    );
+    const angleDiff = Phaser.Math.Angle.ShortestBetween(
+      this.aimAngle,
+      angleToTarget,
+    );
+
+    const blastArcRad = Phaser.Math.DegToRad(balance.blastArc);
+    return Math.abs(angleDiff) <= blastArcRad / 2;
+  }
+
+  alliesFeatureActive() {
+    return (
+      balance.allyEnabled && this.level.currentLevel >= balance.allyStartLevel
+    );
+  }
+
+  decrementAllies() {
+    this.alliesAlive--;
+    this.maybeCheckGameOver();
+  }
+
+  maybeCheckGameOver() {
+    if (this.alliesFeatureActive() && this.alliesAlive <= 0) {
+      this.gameOver();
+    }
+  }
+
+  gameOver() {
+    this.isGameOver = true;
+    this.physics.pause();
+
+    const gameOverText = this.add
+      .text(400, 300, 'No allies left - Game Over', {
+        fontSize: '32px',
+        color: '#ff0000',
+      })
+      .setOrigin(0.5);
+
+    this.time.delayedCall(1000, () => {
+      gameOverText.setText('Press any key to restart');
+      this.input.keyboard!.once('keydown', () => {
+        this.level.currentLevel = 0;
+        this.isGameOver = false;
+        this.scene.restart();
+      });
+    });
   }
 
   startLevel() {
+    this.allies.clear(true, true);
+    this.alliesAlive = 0;
+
     if (this.level.currentLevel > 0) {
       this.audioSystem.play('LEVEL_UP');
     }
     this.level.currentLevel++;
     this.events.emit('levelChanged', this.level.currentLevel);
-    this.spawner.spawnEnemies();
 
-    if (this.levelTimer) {
-      this.levelTimer.destroy();
-    }
-    this.levelTimer = this.time.addEvent({
-      delay: balance.levelTimeSec * 1000,
-      callback: this.endLevel,
-      callbackScope: this,
+    // Spawn enemies and set up listeners
+    const newEnemies = this.spawner.spawnEnemies();
+    this.enemiesAlive = newEnemies.length;
+    this.events.emit('enemiesChanged', this.enemiesAlive);
+    newEnemies.forEach((enemy) => {
+      enemy.once('destroy', this.onEnemyDestroyed, this);
     });
 
-    this.events.emit('timerChanged', balance.levelTimeSec);
+    // Spawn allies
+    if (this.alliesFeatureActive()) {
+      // Spawn 2 allies
+      for (let i = 0; i < 2; i++) {
+        const x = Phaser.Math.Between(100, 700);
+        const y = Phaser.Math.Between(400, 550);
+        const ally = new Ally(this, x, y);
+        this.allies.add(ally);
+        this.alliesAlive++;
+      }
+    }
   }
 
-  endLevel() {
-    this.enemies.clear(true, true);
-    this.bullets.clear(true, true);
-    this.startLevel();
+  onEnemyDestroyed() {
+    this.enemiesAlive--;
+    this.events.emit('enemiesChanged', this.enemiesAlive);
+    if (this.enemiesAlive <= 0) {
+      this.time.delayedCall(400, () => {
+        this.bullets.clear(true, true);
+        this.startLevel();
+      });
+    }
   }
 
   private onBulletHitPlayer: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
@@ -131,5 +285,13 @@ export class Game extends Phaser.Scene {
 
   getPlayer(): Player {
     return this.player;
+  }
+
+  getAllies(): Phaser.Physics.Arcade.Group {
+    return this.allies;
+  }
+
+  getAimAngle(): number {
+    return this.aimAngle;
   }
 }

@@ -4,7 +4,7 @@ import { Game } from './Game';
 export class UI extends Phaser.Scene {
   private gameScene!: Game;
   private levelText!: Phaser.GameObjects.Text;
-  private timerText!: Phaser.GameObjects.Text;
+  private enemiesText!: Phaser.GameObjects.Text;
   private boostBarBg!: Phaser.GameObjects.Graphics;
   private boostBarFill!: Phaser.GameObjects.Graphics;
   private boostText!: Phaser.GameObjects.Text;
@@ -32,9 +32,9 @@ export class UI extends Phaser.Scene {
       )
       .setOrigin(1, 0);
 
-    // Timer Text
-    this.timerText = this.add
-      .text(this.scale.width - 10, 40, 'Time: 0', {
+    // Enemies Text
+    this.enemiesText = this.add
+      .text(this.scale.width - 10, 40, 'Enemies: 0', {
         fontSize: '24px',
         color: '#ffffff',
       })
@@ -81,12 +81,9 @@ export class UI extends Phaser.Scene {
 
       this.boostText.setText(`${Math.round(boostValue * 100)}%`);
     });
-  }
 
-  update() {
-    if (this.gameScene && this.gameScene['levelTimer']) {
-      const remaining = this.gameScene['levelTimer'].getRemainingSeconds();
-      this.timerText.setText(`Time: ${Math.ceil(remaining)}`);
-    }
+    this.gameScene.events.on('enemiesChanged', (count: number) => {
+      this.enemiesText.setText(`Enemies: ${count}`);
+    });
   }
 }
