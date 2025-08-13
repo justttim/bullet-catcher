@@ -21,7 +21,13 @@ export const balance = {
   playerSpeed: 220,
   boostPerBullet: 0.2,
   blastRadius: 180,
+  blastArc: 120, // Angle in degrees
   blastKnockback: 220,
+  boostTelegraphThreshold: 0.8,
+
+  // Ally
+  allyEnabled: true,
+  allyStartLevel: 2,
 
   // Level
   levelTimeSec: 40,
