@@ -18,15 +18,19 @@ export class Spawner {
     this.enemies = enemies;
   }
 
-  spawnEnemies() {
+  spawnEnemies(): Enemy[] {
     const numEnemies = this.level.enemiesForLevel(this.level.currentLevel);
     const ymax = this.scene.scale.height * balance.enemyTopZoneRatio;
+    const newEnemies: Enemy[] = [];
 
     for (let i = 0; i < numEnemies; i++) {
       const x = Phaser.Math.Between(50, this.scene.scale.width - 50);
       const y = Phaser.Math.Between(50, ymax - 50);
       const enemy = new Enemy(this.scene, x, y);
       this.enemies.add(enemy);
+      newEnemies.push(enemy);
     }
+
+    return newEnemies;
   }
 }

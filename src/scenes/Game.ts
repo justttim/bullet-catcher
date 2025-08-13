@@ -29,7 +29,6 @@ export class Game extends Phaser.Scene {
   aiming!: Aiming;
   boost!: Boost;
   audioSystem!: AudioSystem;
-  levelTimer!: Phaser.Time.TimerEvent;
 
   private enemies!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -38,6 +37,7 @@ export class Game extends Phaser.Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private isGameOver = false;
   private alliesAlive = 0;
+  private enemiesAlive = 0;
   private aimAngle = 0;
   private telegraphCone?: Phaser.GameObjects.Graphics;
 
@@ -196,7 +196,6 @@ export class Game extends Phaser.Scene {
   gameOver() {
     this.isGameOver = true;
     this.physics.pause();
-    this.levelTimer.paused = true;
 
     const gameOverText = this.add
       .text(400, 300, 'No allies left - Game Over', {
@@ -224,7 +223,14 @@ export class Game extends Phaser.Scene {
     }
     this.level.currentLevel++;
     this.events.emit('levelChanged', this.level.currentLevel);
-    this.spawner.spawnEnemies();
+
+    const newEnemies = this.spawner.spawnEnemies();
+    this.enemiesAlive = newEnemies.length;
+    this.events.emit('enemiesChanged', this.enemiesAlive);
+
+    newEnemies.forEach((enemy) => {
+      enemy.once('destroy', this.onEnemyDestroyed, this);
+    });
 
     if (this.alliesFeatureActive()) {
       // Spawn 2 allies
@@ -236,23 +242,20 @@ export class Game extends Phaser.Scene {
         this.alliesAlive++;
       }
     }
-
-    if (this.levelTimer) {
-      this.levelTimer.destroy();
-    }
-    this.levelTimer = this.time.addEvent({
-      delay: balance.levelTimeSec * 1000,
-      callback: this.endLevel,
-      callbackScope: this,
-    });
-
-    this.events.emit('timerChanged', balance.levelTimeSec);
   }
 
-  endLevel() {
-    this.enemies.clear(true, true);
+  private onAllEnemiesDefeated() {
     this.bullets.clear(true, true);
     this.startLevel();
+  }
+
+  private onEnemyDestroyed() {
+    this.enemiesAlive--;
+    this.events.emit('enemiesChanged', this.enemiesAlive);
+
+    if (this.enemiesAlive === 0) {
+      this.time.delayedCall(400, this.onAllEnemiesDefeated, [], this);
+    }
   }
 
   private onBulletHitPlayer: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
