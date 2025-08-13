@@ -36,23 +36,26 @@ export class Boost {
     }
 
     const player = this.gameScene.getPlayer();
-    const blastRadius = balance.blastRadius;
 
     // Visual effect for the blast
-    const blastCircle = this.gameScene.add.circle(
+    const blastGraphics = this.gameScene.add.graphics();
+    blastGraphics.fillStyle(0xffffff, 0.7);
+    const blastArcRad = Phaser.Math.DegToRad(balance.blastArc);
+    blastGraphics.slice(
       player.x,
       player.y,
-      blastRadius,
-      0xffffff,
-      0.5,
+      balance.blastRadius,
+      this.gameScene.getAimAngle() - blastArcRad / 2,
+      this.gameScene.getAimAngle() + blastArcRad / 2,
     );
     this.gameScene.tweens.add({
-      targets: blastCircle,
-      radius: blastRadius * 1.5,
+      targets: blastGraphics,
+      scaleX: 1.5,
+      scaleY: 1.5,
       alpha: 0,
       duration: 300,
       onComplete: () => {
-        blastCircle.destroy();
+        blastGraphics.destroy();
       },
     });
 
@@ -62,10 +65,7 @@ export class Boost {
       .getChildren()
       .forEach((enemyGO) => {
         const enemy = enemyGO as Enemy;
-        if (
-          Phaser.Math.Distance.Between(player.x, player.y, enemy.x, enemy.y) <=
-          blastRadius
-        ) {
+        if (this.gameScene.isTargetInCone(enemy)) {
           enemy.destroy();
         }
       });
@@ -76,14 +76,7 @@ export class Boost {
       .getChildren()
       .forEach((bulletGO) => {
         const bullet = bulletGO as Bullet;
-        if (
-          Phaser.Math.Distance.Between(
-            player.x,
-            player.y,
-            bullet.x,
-            bullet.y,
-          ) <= blastRadius
-        ) {
+        if (this.gameScene.isTargetInCone(bullet)) {
           const knockbackVector = new Phaser.Math.Vector2(
             bullet.x - player.x,
             bullet.y - player.y,
@@ -94,6 +87,20 @@ export class Boost {
           );
         }
       });
+
+    // Affect allies
+    if (this.gameScene.alliesFeatureActive()) {
+      this.gameScene
+        .getAllies()
+        .getChildren()
+        .forEach((allyGO) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ally = allyGO as any; // Type assertion to the Ally class defined in Game.ts
+          if (this.gameScene.isTargetInCone(ally)) {
+            ally.kill();
+          }
+        });
+    }
   }
 
   getBoostValue(): number {
