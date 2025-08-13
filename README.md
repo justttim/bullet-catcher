@@ -55,3 +55,5 @@ The Heads-Up Display provides essential information at a glance.
 
 ---
 *This line is added to verify the new PR workflow.*
+
+Workflow sanity check.
