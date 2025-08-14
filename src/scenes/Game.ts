@@ -8,6 +8,7 @@ import { Boost } from '../systems/Boost';
 import { Aiming } from '../systems/Aiming';
 import { AudioSystem } from '../systems/Audio';
 import { balance } from '../config/balance';
+import { Boundaries } from '../systems/Boundaries';
 
 class Ally extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Game, x: number, y: number) {
@@ -29,6 +30,7 @@ export class Game extends Phaser.Scene {
   aiming!: Aiming;
   boost!: Boost;
   audioSystem!: AudioSystem;
+  boundaries!: Boundaries;
 
   private enemies!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -69,6 +71,18 @@ export class Game extends Phaser.Scene {
     allyGraphics.fillRect(0, 0, 24, 24);
     allyGraphics.generateTexture('ally', 24, 24);
     allyGraphics.destroy();
+
+    const wallGraphics = this.make.graphics({ x: 0, y: 0 });
+    wallGraphics.fillStyle(0x888888);
+    wallGraphics.fillRect(0, 0, 1, 1);
+    wallGraphics.generateTexture('wall', 1, 1);
+    wallGraphics.destroy();
+
+    const obstacleGraphics = this.make.graphics({ x: 0, y: 0 });
+    obstacleGraphics.fillStyle(0xaaaaaa);
+    obstacleGraphics.fillRect(0, 0, 1, 1);
+    obstacleGraphics.generateTexture('obstacle', 1, 1);
+    obstacleGraphics.destroy();
   }
 
   create(): void {
@@ -76,6 +90,7 @@ export class Game extends Phaser.Scene {
     this.aiming = new Aiming(this.level);
     this.audioSystem = new AudioSystem(this);
     this.boost = new Boost(this, this.audioSystem);
+    this.boundaries = new Boundaries(this, this.level);
 
     this.player = new Player(this, 400, 500);
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -94,6 +109,25 @@ export class Game extends Phaser.Scene {
       this,
     );
 
+    this.physics.add.collider(this.player, this.boundaries.walls);
+    this.physics.add.collider(this.player, this.boundaries.obstacles);
+    this.physics.add.collider(this.enemies, this.boundaries.walls);
+    this.physics.add.collider(this.enemies, this.boundaries.obstacles);
+    this.physics.add.collider(
+      this.bullets,
+      this.boundaries.walls,
+      this.onBulletHitWall,
+      undefined,
+      this,
+    );
+    this.physics.add.collider(
+      this.bullets,
+      this.boundaries.obstacles,
+      this.onBulletHitWall,
+      undefined,
+      this,
+    );
+
     this.startLevel();
   }
 
@@ -103,6 +137,13 @@ export class Game extends Phaser.Scene {
     }
     this.player.update(this.cursors);
     this.enemies.getChildren().forEach((enemy) => (enemy as Enemy).update());
+
+    if (balance.wrap.enabled) {
+      this.wrapSprite(this.player);
+      this.enemies
+        .getChildren()
+        .forEach((enemy) => this.wrapSprite(enemy as Phaser.Physics.Arcade.Sprite));
+    }
 
     this.aimAngle = Phaser.Math.Angle.Between(
       this.player.x,
@@ -215,6 +256,7 @@ export class Game extends Phaser.Scene {
   }
 
   startLevel() {
+    this.boundaries.setup();
     this.allies.clear(true, true);
     this.alliesAlive = 0;
 
@@ -258,6 +300,19 @@ export class Game extends Phaser.Scene {
     }
   }
 
+  private onBulletHitWall: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback = (
+    bulletGO,
+  ) => {
+    const bullet = bulletGO as Bullet;
+    if (!bullet.body) {
+      return;
+    }
+    bullet.ricochet();
+    // Ensure the bullet speed remains constant
+    const speed = balance.bulletSpeed;
+    bullet.body.velocity.normalize().scale(speed);
+  };
+
   private onBulletHitPlayer: Phaser.Types.Physics.Arcade.ArcadePhysicsCallback =
     (_playerGO, bulletGO): void => {
       const bullet = bulletGO as Bullet;
@@ -295,5 +350,22 @@ export class Game extends Phaser.Scene {
 
   getAimAngle(): number {
     return this.aimAngle;
+  }
+
+  private wrapSprite(sprite: Phaser.Physics.Arcade.Sprite) {
+    const { width, height } = this.scale;
+    const bufferX = sprite.width / 2;
+    const bufferY = sprite.height / 2;
+
+    if (sprite.x < -bufferX) {
+      sprite.x = width + bufferX;
+    } else if (sprite.x > width + bufferX) {
+      sprite.x = -bufferX;
+    }
+    if (sprite.y < -bufferY) {
+      sprite.y = height + bufferY;
+    } else if (sprite.y > height + bufferY) {
+      sprite.y = -bufferY;
+    }
   }
 }

@@ -35,4 +35,28 @@ export const balance = {
   fxEnabled: true,
   sfxEnabled: true,
   sfxVolume: 0.5,
+
+  // World wrap and boundaries
+  wrap: {
+    enabled: true,
+    borderStartLevel: 10,
+    obstacleStartLevel: 20,
+    wallThickness: 12,
+    gapMin: 60,
+    gapMax: 140,
+    sideCoverageMin: 0.6, // 60–100% coverage by walls
+    sideCoverageMax: 1.0,
+    maxGapsPerSide: 2,
+    obstaclesMin: 0,
+    obstaclesMax: 3,
+    obstacleMinSize: 40,
+    obstacleMaxSize: 110,
+    safeRadiusFromPlayer: 120,
+  },
+
+  // Bullet ricochet
+  bulletRicochet: {
+    enabled: true,
+    maxBounces: 6,
+  },
 };

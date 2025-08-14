@@ -15,7 +15,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setCollideWorldBounds(true);
+    this.setCollideWorldBounds(false);
     this.body.setBounce(1, 1);
 
     this.fireTimer = this.scene.time.addEvent({
