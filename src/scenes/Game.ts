@@ -104,12 +104,8 @@ export class Game extends Phaser.Scene {
     this.player.update(this.cursors);
     this.enemies.getChildren().forEach((enemy) => (enemy as Enemy).update());
 
-    this.aimAngle = Phaser.Math.Angle.Between(
-      this.player.x,
-      this.player.y,
-      this.input.activePointer.worldX,
-      this.input.activePointer.worldY,
-    );
+    const ang = this.player.getFacingAngle();
+    if (!Number.isNaN(ang)) this.aimAngle = ang;
 
     // Telegraph logic
     const boostValue = this.boost.getBoostValue();
