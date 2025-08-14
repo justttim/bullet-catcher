@@ -106,4 +106,9 @@ export class Boost {
   getBoostValue(): number {
     return this.boostValue;
   }
+
+  reset(): void {
+    this.boostValue = 0;
+    this.gameScene.events.emit('boostChanged', this.getBoostValue());
+  }
 }
