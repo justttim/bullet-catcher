@@ -8,6 +8,7 @@ import { Boost } from '../systems/Boost';
 import { Aiming } from '../systems/Aiming';
 import { AudioSystem } from '../systems/Audio';
 import { balance } from '../config/balance';
+import { createTips, TipSystem } from '../systems/Tips';
 
 class Ally extends Phaser.Physics.Arcade.Sprite {
   constructor(scene: Game, x: number, y: number) {
@@ -29,6 +30,7 @@ export class Game extends Phaser.Scene {
   aiming!: Aiming;
   boost!: Boost;
   audioSystem!: AudioSystem;
+  tips!: TipSystem;
 
   private enemies!: Phaser.Physics.Arcade.Group;
   private bullets!: Phaser.Physics.Arcade.Group;
@@ -84,6 +86,7 @@ export class Game extends Phaser.Scene {
     this.aiming = new Aiming(this.level);
     this.audioSystem = new AudioSystem(this);
     this.boost = new Boost(this, this.audioSystem);
+    this.tips = createTips(this);
 
     this.player = new Player(this, 400, 500);
     this.cursors = this.input.keyboard!.createCursorKeys();
@@ -111,6 +114,36 @@ export class Game extends Phaser.Scene {
     if (!this.scene.isActive('ui')) {
       this.scene.launch('ui');
     }
+
+    // On first game load:
+    if (!this.tips.hasSeen('intro')) {
+      this.tips.maybeShow(
+        'intro',
+        'Добро пожаловать!\nДвигайтесь WASD/стрелками.\nЛовите пули, чтобы накапливать буст.\nВзрыв — вперёд в 120° по последнему направлению движения.',
+      );
+    }
+
+    this.events.on('boostChanged', (v: number) => {
+      if (v >= balance.boostTelegraphThreshold) {
+        this.tips.maybeShow(
+          'boost-telegraph',
+          'Когда буст почти полон, появляется дуга-визуализация будущего взрыва. Осторожно: союзники в дуге погибнут!',
+        );
+      }
+    });
+
+    this.physics.world.on('worldbounds', (body: Phaser.Physics.Arcade.Body) => {
+      // instanceof check is not reliable with minification, check for property instead
+      if (
+        (body.gameObject as Phaser.GameObjects.Sprite).texture?.key === 'bullet'
+      ) {
+        this.tips.maybeShow(
+          'ricochet',
+          'Пули врагов рикошетят от стен, сохраняя скорость. Думайте наперёд!',
+          { pause: false }, // This should be a quick toast
+        );
+      }
+    });
 
     this.startLevel();
   }
@@ -259,6 +292,28 @@ export class Game extends Phaser.Scene {
         this.allies.add(ally);
         this.alliesAlive++;
       }
+      if (this.getAllies().countActive(true) > 0) {
+        this.tips.maybeShow(
+          'allies',
+          'Союзники! Берегите их — взрыв в дуге может их убить. Проигрыш — когда не осталось союзников.',
+        );
+      }
+    }
+
+    // --- CONTEXTUAL TIPS BASED ON LEVEL ---
+    // Walls appear at level 10 (as per instructions, no real implementation)
+    if (this.level.currentLevel >= 10) {
+      this.tips.maybeShow(
+        'walls',
+        'Границы с разрывами: через «лазейки» можно выйти и появиться с противоположной стороны.',
+      );
+    }
+    // Obstacles appear at level 20 (as per instructions, no real implementation)
+    if (this.level.currentLevel >= 20) {
+      this.tips.maybeShow(
+        'obstacles',
+        'Препятствия мешают движению. Вражеские пули рикошетят от стен и препятствий.',
+      );
     }
   }
 
