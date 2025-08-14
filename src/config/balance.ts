@@ -35,4 +35,10 @@ export const balance = {
   fxEnabled: true,
   sfxEnabled: true,
   sfxVolume: 0.5,
+
+  // Help system
+  help: {
+    tipsEnabledDefault: true,
+    pauseOnTip: true,
+  },
 };
