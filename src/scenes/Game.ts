@@ -71,8 +71,16 @@ export class Game extends Phaser.Scene {
     allyGraphics.destroy();
   }
 
+  init(data?: { fresh?: boolean }) {
+    if (data?.fresh) {
+      this.resetRun();
+    }
+  }
+
   create(): void {
-    this.level = new Level();
+    if (!this.level) {
+      this.level = new Level();
+    }
     this.aiming = new Aiming(this.level);
     this.audioSystem = new AudioSystem(this);
     this.boost = new Boost(this, this.audioSystem);
@@ -93,6 +101,16 @@ export class Game extends Phaser.Scene {
       undefined,
       this,
     );
+
+    const esc = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    esc.on('down', () => {
+      this.scene.stop('ui');
+      this.scene.start('menu');
+    });
+
+    if (!this.scene.isActive('ui')) {
+      this.scene.launch('ui');
+    }
 
     this.startLevel();
   }
@@ -160,6 +178,19 @@ export class Game extends Phaser.Scene {
     const delta = Phaser.Math.Angle.Wrap(angleToTarget - this.aimAngle); // radians
     const halfArc = Phaser.Math.DegToRad(balance.blastArc) / 2;
     return Math.abs(delta) <= halfArc;
+  }
+
+  resetRun(): void {
+    if (this.level) {
+      this.level.currentLevel = 0;
+    }
+    this.isGameOver = false;
+    this.alliesAlive = 0;
+    this.enemiesAlive = 0;
+    if (this.bullets) this.bullets.clear(true, true);
+    if (this.enemies) this.enemies.clear(true, true);
+    if (this.allies) this.allies.clear(true, true);
+    if (this.boost) this.boost.reset();
   }
 
   alliesFeatureActive() {

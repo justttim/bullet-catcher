@@ -13,7 +13,7 @@ export class UI extends Phaser.Scene {
   private boostTween: Phaser.Tweens.Tween | null = null;
 
   constructor() {
-    super({ key: 'ui', active: true });
+    super({ key: 'ui' });
   }
 
   create() {
