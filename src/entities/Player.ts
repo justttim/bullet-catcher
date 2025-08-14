@@ -3,6 +3,7 @@ import { balance } from '../config/balance';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
+  private lastDir = new Phaser.Math.Vector2(0, -1); // default: up
   private wasd: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
@@ -26,18 +27,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
-    this.body.setVelocity(0);
+    let vx = 0;
+    let vy = 0;
 
     if (cursors.left.isDown || this.wasd.left.isDown) {
-      this.body.setVelocityX(-balance.playerSpeed);
+      vx = -balance.playerSpeed;
     } else if (cursors.right.isDown || this.wasd.right.isDown) {
-      this.body.setVelocityX(balance.playerSpeed);
+      vx = balance.playerSpeed;
     }
 
     if (cursors.up.isDown || this.wasd.up.isDown) {
-      this.body.setVelocityY(-balance.playerSpeed);
+      vy = -balance.playerSpeed;
     } else if (cursors.down.isDown || this.wasd.down.isDown) {
-      this.body.setVelocityY(balance.playerSpeed);
+      vy = balance.playerSpeed;
     }
+
+    this.body.setVelocity(vx, vy);
+
+    if (vx !== 0 || vy !== 0) {
+      this.lastDir.set(vx, vy).normalize();
+    }
+  }
+
+  getFacingAngle(): number {
+    return Phaser.Math.Angle.Between(0, 0, this.lastDir.x, this.lastDir.y);
   }
 }
