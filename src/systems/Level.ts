@@ -4,11 +4,11 @@ export class Level {
   public currentLevel: number;
 
   constructor() {
-    this.currentLevel = 1;
+    this.currentLevel = 0;
   }
 
   enemiesForLevel(level: number): number {
-    return balance.baseEnemies + balance.enemyIncrement * (level - 1);
+    return balance.baseEnemies + (level - 1) * (balance.enemyIncrement ?? 1);
   }
 
   sigmaForLevel(level: number): number {

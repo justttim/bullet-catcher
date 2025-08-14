@@ -150,30 +150,20 @@ export class Game extends Phaser.Scene {
   }
 
   isTargetInCone(target: Phaser.GameObjects.Sprite): boolean {
-    const distance = Phaser.Math.Distance.Between(
-      this.player.x,
-      this.player.y,
-      target.x,
-      target.y,
+    const toT = new Phaser.Math.Vector2(
+      target.x - this.player.x,
+      target.y - this.player.y,
     );
-
-    if (distance > balance.blastRadius) {
-      return false;
-    }
-
+    if (toT.length() > balance.blastRadius) return false;
     const angleToTarget = Phaser.Math.Angle.Between(
       this.player.x,
       this.player.y,
       target.x,
       target.y,
-    );
-    const angleDiff = Phaser.Math.Angle.ShortestBetween(
-      this.aimAngle,
-      angleToTarget,
-    );
-
-    const blastArcRad = Phaser.Math.DegToRad(balance.blastArc);
-    return Math.abs(angleDiff) <= blastArcRad / 2;
+    ); // radians
+    const delta = Phaser.Math.Angle.Wrap(angleToTarget - this.aimAngle); // radians
+    const halfArc = Phaser.Math.DegToRad(balance.blastArc) / 2;
+    return Math.abs(delta) <= halfArc;
   }
 
   alliesFeatureActive() {
@@ -217,6 +207,9 @@ export class Game extends Phaser.Scene {
   startLevel() {
     this.allies.clear(true, true);
     this.alliesAlive = 0;
+    this.enemies.clear(true, true);
+    this.enemiesAlive = 0;
+    this.bullets.clear(true, true);
 
     if (this.level.currentLevel > 0) {
       this.audioSystem.play('LEVEL_UP');
@@ -224,14 +217,12 @@ export class Game extends Phaser.Scene {
     this.level.currentLevel++;
     this.events.emit('levelChanged', this.level.currentLevel);
 
-    const newEnemies = this.spawner.spawnEnemies();
+    const newEnemies = this.spawner.spawnEnemies(); // ONLY ONCE
     this.enemiesAlive = newEnemies.length;
     this.events.emit('enemiesChanged', this.enemiesAlive);
+    newEnemies.forEach((e) => e.once('destroy', this.onEnemyDestroyed, this));
 
-    newEnemies.forEach((enemy) => {
-      enemy.once('destroy', this.onEnemyDestroyed, this);
-    });
-
+    // Allies appear only when alliesFeatureActive()
     if (this.alliesFeatureActive()) {
       // Spawn 2 allies
       for (let i = 0; i < 2; i++) {
@@ -244,17 +235,19 @@ export class Game extends Phaser.Scene {
     }
   }
 
-  private onAllEnemiesDefeated() {
-    this.bullets.clear(true, true);
-    this.startLevel();
-  }
-
   private onEnemyDestroyed() {
     this.enemiesAlive--;
     this.events.emit('enemiesChanged', this.enemiesAlive);
-
     if (this.enemiesAlive === 0) {
-      this.time.delayedCall(400, this.onAllEnemiesDefeated, [], this);
+      this.time.delayedCall(
+        400,
+        () => {
+          this.bullets.clear(true, true);
+          this.startLevel();
+        },
+        [],
+        this,
+      );
     }
   }
 
